@@ -1,4 +1,5 @@
 ﻿using BookingService.API.Common.Exceptions;
+using BookingService.API.Domain.Enums;
 using BookingService.API.Infrastructure;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -13,6 +14,7 @@ public sealed class DeleteBookingCommand : IRequest
     }
 
     public int BookingId { get; set; }
+    public int UserId { get; set; }
 }
 
 public sealed class DeleteBookingCommandHandler : IRequestHandler<DeleteBookingCommand>
@@ -28,14 +30,23 @@ public sealed class DeleteBookingCommandHandler : IRequestHandler<DeleteBookingC
     {
         var booking = await _context.Bookings
             .FirstOrDefaultAsync(b => b.Id == request.BookingId, cancellationToken)
-            ?? throw new NotFoundException("Booking not found");
+            ?? throw new NotFoundException("Booking not found.");
+
+        if (booking.UserId != request.UserId)
+            throw new ValidationException("You are not authorized to cancel this booking.");
 
         var service = await _context.Services
+            .Include(s => s.Room)
             .FirstOrDefaultAsync(s => s.Id == booking.ServiceId, cancellationToken)
-            ?? throw new NotFoundException("Service not found");
+            ?? throw new NotFoundException("Service not found.");
+
+        if (service.Start < DateTime.UtcNow.AddHours(24))
+            throw new ValidationException("Bookings can only be cancelled at least 24 hours before the service start time.");
 
         service.Users.Remove(booking.UserId);
-        // todo: check ownership?
+
+        booking.Status = BookingStatus.Cancelled;
+
         // todo: payments etc.
 
         _context.Bookings.Remove(booking);
