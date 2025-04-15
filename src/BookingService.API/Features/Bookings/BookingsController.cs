@@ -36,4 +36,11 @@ public sealed class BookingsController(IMediator mediator) : ApiControllerBase(m
     [ProducesResponseType((int)HttpStatusCode.NotFound, Type = typeof(ApiResult<ProblemDetails>))]
     public async Task<IActionResult> Delete(int bookingId)
         => await ExecuteWithNoContentAsync(new DeleteBookingCommand(bookingId));
+
+    [HttpPut("{bookingId}")]
+    [ProducesResponseType((int)HttpStatusCode.OK, Type = typeof(ApiResult<BookingResponse>))]
+    [ProducesResponseType((int)HttpStatusCode.BadRequest, Type = typeof(ApiResult<ValidationProblemDetails>))]
+    public async Task<IActionResult> Update(int bookingId, CreateBookingRequest booking)
+    => await ExecuteAsync(new UpdateBookingCommand(bookingId, booking));
+
 }
